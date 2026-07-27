@@ -333,128 +333,155 @@ footer { text-align: center; padding: 20px; color: var(--text-dim); font-size: 1
 </div>
 
 <script>
-const hours = [...Array(24)].map((_, i) => `${String(i).padStart(2,'0')}:00`);
-const pm25 = [12,11,10,10,11,13,18,24,29,33,35,38,40,38,36,34,35,37,38,31,26,21,16,14];
-const temp = [23.1,23.0,22.9,22.8,22.9,23.0,23.4,24.0,24.6,25.0,25.2,25.5,25.6,25.8,25.6,25.4,25.5,25.6,25.4,25.0,24.5,24.0,23.6,23.3];
-const humi = [55,55,56,56,55,54,53,52,51,50,50,49,49,48,49,50,51,51,52,53,54,54,55,55];
+const API_BASE_URL = 'http://192.168.0.16:8000/api';
+const API_KEY = 'xJgIBbSh0tuIyQXqPtRJZMncea7NUvdH_sTwaLuI_SA';
 
+const reqHeaders = { "X-API-Key": API_KEY };
+
+// Chart.js 초기 세팅 (추이 그래프는 추후 /measurements API 연동을 위해 뼈대만 둠)
 const ctx = document.getElementById('trendChart');
 const gradCo2 = ctx.getContext('2d').createLinearGradient(0, 0, 0, 280);
 gradCo2.addColorStop(0, 'rgba(56,189,248,0.25)');
 gradCo2.addColorStop(1, 'rgba(56,189,248,0)');
 
-new Chart(ctx, {
+const trendChart = new Chart(ctx, {
   type: 'line',
-  data: {
-    labels: hours,
-    datasets: [
-      { label: 'PM2.5 (㎍/m³)', data: pm25, borderColor: '#38bdf8', backgroundColor: gradCo2,
-        fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5, yAxisID: 'y' },
-      { label: '온도 (℃)', data: temp, borderColor: '#f97316', tension: 0.4,
-        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, yAxisID: 'y1' },
-      { label: '습도 (%)', data: humi, borderColor: '#22d3ee', borderDash: [5,4], tension: 0.4,
-        borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 5, yAxisID: 'y1' }
-    ]
-  },
+  data: { labels: [], datasets: [
+      { label: 'PM2.5 (㎍/m³)', data: [], borderColor: '#38bdf8', backgroundColor: gradCo2, fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 0, yAxisID: 'y' },
+      { label: '온도 (℃)', data: [], borderColor: '#f97316', tension: 0.4, borderWidth: 2, pointRadius: 0, yAxisID: 'y1' },
+      { label: '습도 (%)', data: [], borderColor: '#22d3ee', borderDash: [5,4], tension: 0.4, borderWidth: 1.5, pointRadius: 0, yAxisID: 'y1' }
+  ]},
   options: {
     responsive: true, maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { labels: { color: '#8a93a6', usePointStyle: true, pointStyle: 'circle', boxWidth: 7, font: { family: 'Pretendard Variable', size: 12 } } },
-      tooltip: { backgroundColor: 'rgba(15,20,32,0.95)', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
-                 titleFont: { family: 'Pretendard Variable' }, bodyFont: { family: 'Pretendard Variable' }, padding: 12, cornerRadius: 10 }
-    },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c6478', maxTicksLimit: 8, font: { size: 11 } } },
-      y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#38bdf8', font: { size: 11 } },
-           title: { display: true, text: 'PM2.5 (㎍/m³)', color: '#5c6478', font: { size: 11 } } },
-      y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#8a93a6', font: { size: 11 } } }
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c6478', font: { size: 11 } } },
+      y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#38bdf8' } },
+      y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#8a93a6' } }
     }
   }
 });
 
-// ── 지도 (네이버 지도 API v3) ──
-// NCP 콘솔(https://console.ncloud.com) > Maps > Application 등록 후 Client ID 입력
+// 네이버 지도 및 상태 컬러 매핑
 const NAVER_MAP_CLIENT_ID = 'yaszgkt52h';
-const stations = [
-  { id: 1, name: 'Station #1', loc: '야외 중앙광장', lat: 36.10312, lng: 129.38823, status: 'online',
-    pm25: '38 ㎍/m³', temp: '25.4 ℃', surfaceTemp: '41.2 ℃', humi: '51.8 %', battery: '87 %', last: '방금' },
-  { id: 2, name: 'Station #2', loc: '도서관 앞 휴식 공간', lat: 36.10265, lng: 129.39010, status: 'warning',
-    pm25: '22 ㎍/m³', temp: '24.1 ℃', surfaceTemp: '38.6 ℃', humi: '48.2 %', battery: '13 %', last: '1분 전' },
-  { id: 3, name: 'Station #3', loc: '버스정류장 벤치', lat: 36.10190, lng: 129.38680, status: 'offline',
-    pm25: '—', temp: '—', surfaceTemp: '—', humi: '—', battery: '—', last: '5시간 전' }
-];
-
 const statusLabel = { online: '온라인', warning: '경고', offline: '오프라인' };
 const statusColor = { online: '#4ade80', warning: '#fbbf24', offline: '#5c6478' };
-
-function initNaverMap() {
-  const map = new naver.maps.Map('map', {
-    center: new naver.maps.LatLng(36.10255, 129.38840),
-    zoom: 17,
-    mapDataControl: false,
-    scaleControl: false
-  });
-
-  let openInfo = null;
-
-  stations.forEach(s => {
-    const marker = new naver.maps.Marker({
-      position: new naver.maps.LatLng(s.lat, s.lng),
-      map,
-      icon: {
-        content: `<div class="bench-marker ${s.status}" style="position:relative"></div>`,
-        anchor: new naver.maps.Point(9, 9)
-      }
-    });
-
-    const iw = new naver.maps.InfoWindow({
-      content: `<div class="iw">
-        <div class="popup-title">${s.name} · <span style="color:${statusColor[s.status]}">${statusLabel[s.status]}</span></div>
-        <div class="popup-row"><span>위치</span><b>${s.loc}</b></div>
-        <div class="popup-row"><span>미세먼지(PM2.5)</span><b>${s.pm25}</b></div>
-        <div class="popup-row"><span>온도 / 습도</span><b>${s.temp} / ${s.humi}</b></div>
-        <div class="popup-row"><span>지면온도(열섬)</span><b>${s.surfaceTemp}</b></div>
-        <div class="popup-row"><span>배터리</span><b>${s.battery}</b></div>
-        <div class="popup-row"><span>마지막 수신</span><b>${s.last}</b></div>
-      </div>`,
-      backgroundColor: 'transparent',
-      borderWidth: 0,
-      disableAnchor: true,
-      pixelOffset: new naver.maps.Point(0, -16)
-    });
-
-    naver.maps.Event.addListener(marker, 'click', () => {
-      if (openInfo) openInfo.close();
-      if (openInfo === iw) { openInfo = null; return; }
-      iw.open(map, marker);
-      openInfo = iw;
-    });
-  });
-
-  naver.maps.Event.addListener(map, 'click', () => {
-    if (openInfo) { openInfo.close(); openInfo = null; }
-  });
-}
+let map = null;
+let mapMarkers = [];
 
 function showMapNotice(html) {
   document.getElementById('map').innerHTML = `<div class="map-notice"><div>${html}</div></div>`;
 }
 
-window.navermap_authFailure = () =>
-  showMapNotice('네이버 지도 인증 실패 — Client ID와 서비스 URL 등록을 확인하세요.');
-
-if (NAVER_MAP_CLIENT_ID === 'YOUR_NCP_KEY_ID') {
-  showMapNotice(`네이버 지도 Client ID가 필요합니다.<br>
-    NCP 콘솔 › Maps › Application 등록 후<br>
-    <code>NAVER_MAP_CLIENT_ID</code> 값을 교체하세요.`);
-} else {
-  const sc = document.createElement('script');
-  sc.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAP_CLIENT_ID}`;
-  sc.onload = initNaverMap;
-  sc.onerror = () => showMapNotice('네이버 지도 스크립트 로드 실패 — 네트워크를 확인하세요.');
-  document.head.appendChild(sc);
+// 1. 최신 데이터(KPI) 가져오기
+async function fetchLatestData(stationId = 1) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/stations/${stationId}/latest`, { headers: reqHeaders });
+    if (!res.ok) return;
+    const json = await res.json();
+    updateKPI(json.data);
+  } catch (err) {
+    console.error("Latest fetch error:", err);
+  }
 }
+
+function updateKPI(data) {
+  if (!data) return;
+  
+  // KPI 화면 업데이트 로직 (DOM 요소 선택은 클래스/구조에 맞게 개선 필요, 여기서는 임시 텍스트 변경)
+  const kpiValues = document.querySelectorAll('.kpi .value');
+  if(kpiValues.length >= 7) {
+    kpiValues[0].innerHTML = `${data.pm25 || 0}<span class="unit">㎍/m³</span>`;
+    kpiValues[1].innerHTML = `${data.temperature || 0}<span class="unit">℃</span>`;
+    kpiValues[2].innerHTML = `${data.humidity || 0}<span class="unit">%</span>`;
+    kpiValues[3].innerHTML = `${data.pm10 || 0}<span class="unit">㎍/m³</span>`;
+    kpiValues[4].innerHTML = `${data.surface_temp || 0}<span class="unit">℃</span>`;
+    kpiValues[5].innerHTML = `${data.turbidity || 0}<span class="unit">OD</span>`;
+    kpiValues[6].innerHTML = `${data.battery_level || 0}<span class="unit">%</span>`;
+  }
+}
+
+// 2. 스테이션 목록 가져오기 (테이블 & 지도)
+async function fetchStations() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/stations`, { headers: reqHeaders });
+    if (!res.ok) return;
+    const json = await res.json();
+    const stList = json.data.stations;
+    updateStationsTable(stList);
+    if(map) updateMapMarkers(stList);
+  } catch (err) {
+    console.error("Stations fetch error:", err);
+  }
+}
+
+function updateStationsTable(stations) {
+  const tbody = document.querySelector('.stations-panel tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  stations.forEach(s => {
+    const st = s.status || 'offline';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><b>#${s.id}</b></td><td>${s.name}</td>
+      <td><span class="status-pill st-${st}"><i></i>${statusLabel[st] || st}</span></td>
+      <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>방금</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateMapMarkers(stations) {
+  mapMarkers.forEach(m => m.setMap(null));
+  mapMarkers = [];
+  
+  stations.forEach(s => {
+    if(!s.latitude || !s.longitude) return;
+    const marker = new naver.maps.Marker({
+      position: new naver.maps.LatLng(s.latitude, s.longitude),
+      map,
+      icon: {
+        content: `<div class="bench-marker ${s.status || 'offline'}" style="position:relative"></div>`,
+        anchor: new naver.maps.Point(9, 9)
+      }
+    });
+    mapMarkers.push(marker);
+  });
+}
+
+// 초기화
+function initNaverMap() {
+  map = new naver.maps.Map('map', {
+    center: new naver.maps.LatLng(36.10255, 129.38840),
+    zoom: 17, mapDataControl: false, scaleControl: false
+  });
+  fetchStations();
+}
+
+window.navermap_authFailure = () => showMapNotice('네이버 지도 인증 실패');
+
+function initDashboard() {
+  fetchLatestData();
+  
+  if (NAVER_MAP_CLIENT_ID === 'YOUR_NCP_KEY_ID') {
+    showMapNotice('네이버 지도 Client ID가 필요합니다.');
+  } else {
+    const sc = document.createElement('script');
+    sc.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAP_CLIENT_ID}`;
+    sc.onload = initNaverMap;
+    document.head.appendChild(sc);
+  }
+  
+  // 10초마다 주기적 업데이트
+  setInterval(() => {
+    fetchLatestData();
+    fetchStations();
+  }, 10000);
+}
+
+// 로드 완료 시 시작
+document.addEventListener('DOMContentLoaded', initDashboard);
 </script>
 </body>
 </html>
