@@ -410,8 +410,38 @@ async function fetchStations() {
     const stList = json.data.stations;
     updateStationsTable(stList);
     if(map) updateMapMarkers(stList);
-  } catch (err) {
+} catch (err) {
     console.error("Stations fetch error:", err);
+  }
+}
+
+// 3. 최근 측정 데이터(그래프) 가져오기
+async function fetchMeasurements(stationId = 1) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/stations/${stationId}/measurements?limit=24`, { headers: reqHeaders });
+    if (!res.ok) return;
+    const json = await res.json();
+    const data = json.data.reverse(); // 과거 시간부터 오른쪽으로 흐르도록 정렬
+    
+    if(data.length === 0) return;
+
+    // x축 라벨(시간:분)과 데이터 배열 추출
+    const labels = data.map(d => {
+      const dt = new Date(d.measured_at);
+      return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    });
+    const pm25 = data.map(d => d.pm25);
+    const temp = data.map(d => d.temperature);
+    const humi = data.map(d => d.humidity);
+
+    // 차트 데이터 교체 및 렌더링
+    trendChart.data.labels = labels;
+    trendChart.data.datasets[0].data = pm25;
+    trendChart.data.datasets[1].data = temp;
+    trendChart.data.datasets[2].data = humi;
+    trendChart.update();
+  } catch (err) {
+    console.error("Measurements fetch error:", err);
   }
 }
 
@@ -463,6 +493,7 @@ window.navermap_authFailure = () => showMapNotice('네이버 지도 인증 실�
 
 function initDashboard() {
   fetchLatestData();
+  fetchMeasurements();
   
   if (NAVER_MAP_CLIENT_ID === 'YOUR_NCP_KEY_ID') {
     showMapNotice('네이버 지도 Client ID가 필요합니다.');
@@ -477,6 +508,7 @@ function initDashboard() {
   setInterval(() => {
     fetchLatestData();
     fetchStations();
+    fetchMeasurements();
   }, 10000);
 }
 
