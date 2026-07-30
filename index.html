@@ -658,7 +658,7 @@
     </div>
 
     <script>
-      const API_BASE_URL = "http://192.168.0.16:8000/api";
+      const API_BASE_URL = "https://express-autopilot-ritzy.ngrok-free.dev/api";
       const API_KEY = "xJgIBbSh0tuIyQXqPtRJZMncea7NUvdH_sTwaLuI_SA";
 
       const reqHeaders = { "X-API-Key": API_KEY };
@@ -713,13 +713,13 @@
           scales: {
             x: {
               type: "time",
-              time: { 
+              time: {
                 tooltipFormat: "yyyy-MM-dd HH:mm",
                 displayFormats: {
                   minute: "HH:mm",
                   hour: "HH:mm",
-                  day: "MM-dd"
-                }
+                  day: "MM-dd",
+                },
               },
               grid: { color: "rgba(255,255,255,0.04)" },
               ticks: { color: "#5c6478", font: { size: 11 } },
@@ -835,34 +835,69 @@
           const labelEl = kpi.querySelector(".label");
           const chipEl = labelEl.querySelector(".chip");
           if (chipEl && val !== null && val !== undefined) {
-            let status = "good", text = "정상";
+            let status = "good",
+              text = "정상";
             if (labelTxt.includes("PM2.5")) {
               if (val <= 15) text = "좋음";
               else if (val <= 35) text = "보통";
-              else if (val <= 75) { text = "나쁨"; status = "warn"; }
-              else { text = "매우나쁨"; status = "warn"; }
+              else if (val <= 75) {
+                text = "나쁨";
+                status = "warn";
+              } else {
+                text = "매우나쁨";
+                status = "warn";
+              }
             } else if (labelTxt.includes("PM10")) {
               if (val <= 30) text = "좋음";
               else if (val <= 80) text = "보통";
-              else if (val <= 150) { text = "나쁨"; status = "warn"; }
-              else { text = "매우나쁨"; status = "warn"; }
-            } else if (labelTxt.includes("온도") && !labelTxt.includes("지면")) {
-              if (val >= 33) { text = "폭염"; status = "warn"; }
-              else if (val <= 0) { text = "결빙주의"; status = "warn"; }
+              else if (val <= 150) {
+                text = "나쁨";
+                status = "warn";
+              } else {
+                text = "매우나쁨";
+                status = "warn";
+              }
+            } else if (
+              labelTxt.includes("온도") &&
+              !labelTxt.includes("지면")
+            ) {
+              if (val >= 33) {
+                text = "폭염";
+                status = "warn";
+              } else if (val <= 0) {
+                text = "결빙주의";
+                status = "warn";
+              }
             } else if (labelTxt.includes("지면온도")) {
-              if (val >= 40) { text = "열섬 주의"; status = "warn"; }
+              if (val >= 40) {
+                text = "열섬 주의";
+                status = "warn";
+              }
             } else if (labelTxt.includes("습도")) {
-              if (val >= 80 || val <= 20) { text = "주의"; status = "warn"; }
+              if (val >= 80 || val <= 20) {
+                text = "주의";
+                status = "warn";
+              }
             } else if (labelTxt.includes("탁도")) {
-              if (val >= 2.0) { text = "교체 권장"; status = "warn"; }
+              if (val >= 2.0) {
+                text = "교체 권장";
+                status = "warn";
+              }
             } else if (labelTxt.includes("배터리")) {
-              if (val <= 20) { text = "충전 필요"; status = "warn"; }
+              if (val <= 20) {
+                text = "충전 필요";
+                status = "warn";
+              }
             } else if (labelTxt.includes("CO2")) {
-              if (val > 1000) { text = "환기 요망"; status = "warn"; }
-              else text = "보통";
+              if (val > 1000) {
+                text = "환기 요망";
+                status = "warn";
+              } else text = "보통";
             } else if (labelTxt.includes("NO2")) {
-              if (val > 0.06) { text = "나쁨"; status = "warn"; }
-              else text = "보통";
+              if (val > 0.06) {
+                text = "나쁨";
+                status = "warn";
+              } else text = "보통";
             }
             chipEl.className = `chip ${status}`;
             chipEl.textContent = text;
@@ -910,7 +945,10 @@
 
           // 드롭다운 업데이트 (처음 한 번 또는 갯수가 다를 때만)
           const selectEl = document.getElementById("stationSelect");
-          if (!isDropdownInitialized || selectEl.options.length !== stList.length) {
+          if (
+            !isDropdownInitialized ||
+            selectEl.options.length !== stList.length
+          ) {
             selectEl.innerHTML = "";
             stList.forEach((s) => {
               const opt = document.createElement("option");
@@ -927,7 +965,9 @@
           const offlineCnt = stList.filter(
             (s) => s.status === "offline",
           ).length;
-          const warningCnt = stList.filter((s) => s.status === "warning").length;
+          const warningCnt = stList.filter(
+            (s) => s.status === "warning",
+          ).length;
           const subEl = document.querySelector(".stations-panel .sub");
           if (subEl)
             subEl.textContent = `전체 ${stList.length}대 · 온라인 ${onlineCnt} · 경고 ${warningCnt} · 오프라인 ${offlineCnt}`;
@@ -945,7 +985,10 @@
                   s.latestData = lJson.data;
                 }
               } catch (e) {
-                console.error("Failed to fetch latest for station", s.stationId);
+                console.error(
+                  "Failed to fetch latest for station",
+                  s.stationId,
+                );
               }
               return s;
             }),
@@ -966,19 +1009,24 @@
         stations.forEach((s) => {
           const st = s.status || "offline";
           const d = s.latestData || {};
-          
+
           // 날짜 포맷 (hh:mm)
-          const lastSeenStr = s.lastSeen ? new Date(s.lastSeen).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '없음';
-          
+          const lastSeenStr = s.lastSeen
+            ? new Date(s.lastSeen).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "없음";
+
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td><b>#${s.stationId}</b></td><td>${s.name}</td>
             <td><span class="status-pill st-${st}"><i></i>${statusLabel[st] || st}</span></td>
-            <td>${d.pm25 !== undefined && d.pm25 !== null ? d.pm25.toFixed(1) + ' ㎍/m³' : '-'}</td>
-            <td>${d.temperature !== undefined && d.temperature !== null ? d.temperature.toFixed(1) + ' ℃' : '-'}</td>
-            <td>${d.surfaceTemp !== undefined && d.surfaceTemp !== null ? d.surfaceTemp.toFixed(1) + ' ℃' : '-'}</td>
-            <td>${d.humidity !== undefined && d.humidity !== null ? d.humidity.toFixed(1) + ' %' : '-'}</td>
-            <td>${d.batteryLevel !== undefined && d.batteryLevel !== null ? d.batteryLevel.toFixed(1) + ' %' : '-'}</td>
+            <td>${d.pm25 !== undefined && d.pm25 !== null ? d.pm25.toFixed(1) + " ㎍/m³" : "-"}</td>
+            <td>${d.temperature !== undefined && d.temperature !== null ? d.temperature.toFixed(1) + " ℃" : "-"}</td>
+            <td>${d.surfaceTemp !== undefined && d.surfaceTemp !== null ? d.surfaceTemp.toFixed(1) + " ℃" : "-"}</td>
+            <td>${d.humidity !== undefined && d.humidity !== null ? d.humidity.toFixed(1) + " %" : "-"}</td>
+            <td>${d.batteryLevel !== undefined && d.batteryLevel !== null ? d.batteryLevel.toFixed(1) + " %" : "-"}</td>
             <td>${lastSeenStr}</td>
           `;
           tbody.appendChild(tr);
@@ -1030,7 +1078,6 @@
           console.error("Measurements fetch error:", err);
         }
       }
-
 
       function updateMapMarkers(stations) {
         mapMarkers.forEach((m) => m.setMap(null));
@@ -1126,9 +1173,12 @@
           selectEl.addEventListener("change", (e) => {
             currentStationId = parseInt(e.target.value);
             // 패널 제목 업데이트
-            const envSub = document.querySelector(".panel-grid .panel:first-child .sub");
-            if (envSub) envSub.textContent = `PM2.5 · 온도 · 습도 — Station #${currentStationId}`;
-            
+            const envSub = document.querySelector(
+              ".panel-grid .panel:first-child .sub",
+            );
+            if (envSub)
+              envSub.textContent = `PM2.5 · 온도 · 습도 — Station #${currentStationId}`;
+
             fetchLatestData();
             fetchMeasurements();
             fetchEvents();
