@@ -661,7 +661,10 @@
       const API_BASE_URL = "https://express-autopilot-ritzy.ngrok-free.dev/api";
       const API_KEY = "xJgIBbSh0tuIyQXqPtRJZMncea7NUvdH_sTwaLuI_SA";
 
-      const reqHeaders = { "X-API-Key": API_KEY };
+      const reqHeaders = { 
+        "X-API-Key": API_KEY,
+        "ngrok-skip-browser-warning": "69420"
+      };
 
       // Chart.js 초기 세팅 (추이 그래프는 추후 /measurements API 연동을 위해 뼈대만 둠)
       const ctx = document.getElementById("trendChart");
