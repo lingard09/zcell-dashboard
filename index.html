@@ -530,6 +530,21 @@
           <div class="value">41.2<span class="unit">℃</span></div>
           <div class="delta up">▲ 공기 대비 +15.8℃</div>
         </div>
+        <div class="kpi" style="--bar: #fca5a5">
+          <div class="label">CO2 <span class="chip good">보통</span></div>
+          <div class="value">0<span class="unit">ppm</span></div>
+          <div class="delta flat">—</div>
+        </div>
+        <div class="kpi" style="--bar: #d8b4fe">
+          <div class="label">NO2 <span class="chip good">보통</span></div>
+          <div class="value">0<span class="unit">ppm</span></div>
+          <div class="delta flat">—</div>
+        </div>
+        <div class="kpi" style="--bar: #f43f5e">
+          <div class="label">pH <span class="chip good">정상</span></div>
+          <div class="value">7.0<span class="unit"></span></div>
+          <div class="delta flat">—</div>
+        </div>
         <div class="kpi" style="--bar: #2dd4bf">
           <div class="label">
             리액터 탁도 <span class="chip warn">교체 권장</span>
@@ -541,16 +556,6 @@
           <div class="label">배터리 <span class="chip good">정상</span></div>
           <div class="value">87<span class="unit">%</span></div>
           <div class="delta flat">약 12일 남음</div>
-        </div>
-        <div class="kpi" style="--bar: #fca5a5">
-          <div class="label">CO2 <span class="chip good">보통</span></div>
-          <div class="value">0<span class="unit">ppm</span></div>
-          <div class="delta flat">—</div>
-        </div>
-        <div class="kpi" style="--bar: #d8b4fe">
-          <div class="label">NO2 <span class="chip good">보통</span></div>
-          <div class="value">0<span class="unit">ppm</span></div>
-          <div class="delta flat">—</div>
         </div>
       </section>
 
@@ -661,9 +666,9 @@
       const API_BASE_URL = "https://express-autopilot-ritzy.ngrok-free.dev/api";
       const API_KEY = "xJgIBbSh0tuIyQXqPtRJZMncea7NUvdH_sTwaLuI_SA";
 
-      const reqHeaders = { 
+      const reqHeaders = {
         "X-API-Key": API_KEY,
-        "ngrok-skip-browser-warning": "69420"
+        "ngrok-skip-browser-warning": "69420",
       };
 
       // Chart.js 초기 세팅 (추이 그래프는 추후 /measurements API 연동을 위해 뼈대만 둠)
@@ -799,6 +804,10 @@
             val = data.no2;
             oldVal = oldData?.no2;
             unit = "ppm";
+          } else if (labelTxt.includes("pH")) {
+            val = data.ph;
+            oldVal = oldData?.ph;
+            unit = "";
           }
 
           // 1. 최신 수치 렌더링
@@ -901,6 +910,11 @@
                 text = "나쁨";
                 status = "warn";
               } else text = "보통";
+            } else if (labelTxt.includes("pH")) {
+              if (val < 6.5 || val > 8.5) {
+                text = "주의";
+                status = "warn";
+              } else text = "정상";
             }
             chipEl.className = `chip ${status}`;
             chipEl.textContent = text;
